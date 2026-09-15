@@ -11,6 +11,17 @@ import numpy as np
 import config
 
 
+def _normalize_ticker(series: pd.Series) -> pd.Series:
+    """종목코드를 병합 가능한 6자리 문자열로 통일합니다."""
+    return (
+        series.astype(str)
+        .str.strip()
+        .str.replace(r"\\.0$", "", regex=True)
+        .str.replace(r"^A", "", regex=True)
+        .str.zfill(6)
+    )
+
+
 def _rsi(series: pd.Series, period: int = 14) -> pd.Series:
     delta = series.diff()
     gain = delta.clip(lower=0).rolling(period).mean()
@@ -119,6 +130,12 @@ def compute_scores() -> pd.DataFrame:
     supply = score_supply_demand()
     event = score_event()
 
+    # CSV를 읽을 때 005930이 숫자 5930으로 추론될 수 있으므로
+    # 세 데이터셋의 병합 키를 모두 6자리 문자열로 맞춥니다.
+    for frame in (tech, supply, event):
+        if "ticker" in frame.columns and not frame.empty:
+            frame["ticker"] = _normalize_ticker(frame["ticker"])
+
     merged = pd.merge(tech, supply, on="ticker", how="outer")
     merged = pd.merge(merged, event, on="ticker", how="outer").fillna(0)
 
@@ -141,3 +158,4 @@ def compute_scores() -> pd.DataFrame:
 
 if __name__ == "__main__":
     compute_scores()
+
