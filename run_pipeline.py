@@ -1,12 +1,10 @@
-"""
-전체 파이프라인 실행 스크립트.
-GitHub Actions가 매일 아침 이 파일 하나만 실행하면 됩니다:  python run_pipeline.py
-"""
+"""GitHub Actions에서 실행하는 전체 파이프라인."""
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts"))
 
+import fetch_market_indices
 import fetch_price_data
 import fetch_investor_data
 import fetch_buyback_dart
@@ -15,6 +13,9 @@ import generate_html
 
 
 def main():
+    print("=== 0. 국내·미국 주요 지수 수집 ===")
+    fetch_market_indices.fetch_market_indices()
+
     print("=== 1. 가격/거래량 데이터 수집 ===")
     fetch_price_data.fetch_all_prices()
 
