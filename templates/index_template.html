@@ -3,155 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>수원WM 데일리 종목 스크리닝</title>
+<title>수원WM Market Screen</title>
 <style>
   :root {
-    --navy: #0b1f3a;
-    --orange: #e8621f;
-    --bg: #f6f7f9;
-    --border: #e2e5ea;
-    --muted: #667085;
+    --navy-950: #00263e;
+    --navy-900: #003b5c;
+    --navy-700: #07577d;
+    --orange: #f58220;
+    --orange-soft: #fff4e8;
+    --bg: #f2f5f7;
+    --surface: #ffffff;
+    --line: #dfe5e9;
+    --text: #17232c;
+    --muted: #667783;
+    --up: #d63230;
+    --down: #2166c2;
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
-    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
     background: var(--bg);
-    color: #1a1a1a;
+    color: var(--text);
   }
+  .brand-line { height: 5px; background: linear-gradient(90deg, var(--orange) 0 13%, #f9a64a 13% 22%, var(--navy-900) 22%); }
   header {
-    background: var(--navy);
+    background: linear-gradient(125deg, var(--navy-950), var(--navy-900) 72%, #07577d);
     color: #fff;
-    padding: 24px 20px;
   }
-  header h1 { margin: 0 0 4px; font-size: 20px; }
-  header p { margin: 0; font-size: 13px; opacity: 0.78; }
-  .badge {
-    display: inline-block;
-    background: var(--orange);
-    color: #fff;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    margin-left: 8px;
-    vertical-align: middle;
+  .header-inner { max-width: 1180px; margin: 0 auto; padding: 28px 22px 30px; }
+  .eyebrow { color: #ffb56f; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+  header h1 { margin: 8px 0 6px; font-size: clamp(24px, 4vw, 38px); letter-spacing: -.04em; }
+  header p { margin: 0; color: rgba(255,255,255,.76); font-size: 13px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 22px; }
+  .section-title { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin: 0 0 12px; }
+  .section-title h2 { margin: 0; font-size: 18px; color: var(--navy-950); letter-spacing: -.02em; }
+  .section-title p { margin: 0; color: var(--muted); font-size: 11px; text-align: right; }
+  .market-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+  .market-card {
+    min-height: 125px; padding: 15px; background: var(--surface); border: 1px solid var(--line);
+    border-top: 3px solid var(--navy-700); border-radius: 7px; box-shadow: 0 4px 18px rgba(0,38,62,.055);
   }
-  main { padding: 16px; max-width: 1000px; margin: 0 auto; }
-  .meta { font-size: 13px; color: #555; margin-bottom: 12px; }
-  .disclaimer {
-    background: #fff7ed;
-    border: 1px solid #fed7aa;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 12px;
-    color: #7c4a1e;
-    margin-bottom: 16px;
-    line-height: 1.55;
-  }
-  .controls {
-    display: flex;
-    justify-content: flex-end;
-    margin: 0 0 10px;
-  }
-  .toggle-button {
-    border: 1px solid var(--navy);
-    background: #fff;
-    color: var(--navy);
-    border-radius: 7px;
-    padding: 8px 14px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .toggle-button:hover { background: #eef1f6; }
+  .market-card-top { display: flex; justify-content: space-between; align-items: center; color: var(--navy-700); font-size: 12px; font-weight: 800; letter-spacing: .02em; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #8da0ad; }
+  .market-card strong { display: block; margin-top: 12px; color: var(--navy-950); font-size: 23px; letter-spacing: -.03em; }
+  .market-card p { margin: 6px 0 0; font-size: 12px; }
+  .market-card p b { margin-left: 4px; }
+  .market-card small { display: block; margin-top: 8px; color: var(--muted); font-size: 10px; }
+  .market-card.up { border-top-color: var(--up); } .market-card.up p { color: var(--up); } .market-card.up .status-dot { background: var(--up); }
+  .market-card.down { border-top-color: var(--down); } .market-card.down p { color: var(--down); } .market-card.down .status-dot { background: var(--down); }
+  .market-card.unavailable { opacity: .72; } .market-card.unavailable strong { font-size: 17px; color: var(--muted); }
+  .market-empty { grid-column: 1/-1; padding: 18px; background: #fff; border: 1px solid var(--line); color: var(--muted); }
+  .market-note { margin: 0 0 22px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 5px 22px rgba(0,38,62,.05); overflow: hidden; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 17px 18px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { margin: 0 0 4px; color: var(--navy-950); font-size: 18px; }
+  .meta { color: var(--muted); font-size: 11px; }
+  .toggle-button { border: 1px solid var(--navy-900); background: var(--navy-900); color: #fff; border-radius: 4px; padding: 9px 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+  .toggle-button:hover { background: var(--navy-700); }
   .table-wrap { overflow-x: auto; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    font-size: 13px;
-    min-width: 560px;
-  }
-  th, td {
-    padding: 8px 6px;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-  th { background: #eef1f6; color: var(--navy); cursor: pointer; font-size: 12px; }
-  td:nth-child(2) { text-align: left; font-weight: 600; }
-  .score-total { color: var(--orange); font-weight: 700; }
-  .methodology {
-    margin-top: 20px;
-    padding: 18px;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    line-height: 1.65;
-    font-size: 13px;
-  }
-  .methodology h2 { margin: 0 0 12px; color: var(--navy); font-size: 17px; }
-  .methodology h3 { margin: 14px 0 4px; color: var(--navy); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 13px; }
+  th, td { padding: 11px 9px; text-align: center; border-bottom: 1px solid #edf0f2; white-space: nowrap; }
+  th { position: sticky; top: 0; background: #f7f9fa; color: #536572; font-size: 11px; cursor: pointer; }
+  tbody tr:hover { background: #f8fbfc; }
+  .rank { width: 55px; color: var(--muted); font-weight: 800; }
+  .stock-name { text-align: left; color: var(--navy-950); font-weight: 800; }
+  .ticker { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .market-badge { padding: 3px 7px; background: #edf4f7; border-radius: 3px; color: var(--navy-700); font-size: 10px; font-weight: 800; }
+  .score-total { color: var(--orange); font-size: 15px; font-weight: 900; }
+  .disclaimer { margin: 14px 0 0; padding: 12px 15px; background: var(--orange-soft); border-left: 3px solid var(--orange); color: #714820; font-size: 11px; line-height: 1.6; }
+  .methodology { margin-top: 22px; padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 8px; line-height: 1.68; font-size: 13px; }
+  .methodology h2 { margin: 0 0 13px; color: var(--navy-950); font-size: 19px; }
+  .methodology h3 { margin: 16px 0 5px; color: var(--navy-700); font-size: 14px; }
   .methodology p { margin: 4px 0; }
-  .formula {
-    margin: 10px 0;
-    padding: 10px 12px;
-    background: #eef1f6;
-    border-left: 4px solid var(--orange);
-    font-weight: 700;
+  .formula { padding: 12px 14px; background: #edf4f7; border-left: 4px solid var(--orange); color: var(--navy-950); font-weight: 900; }
+  .note { color: var(--muted); font-size: 11px; }
+  footer { padding: 28px 18px; text-align: center; color: #8998a2; font-size: 10px; }
+  @media (max-width: 820px) { .market-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 520px) {
+    main { padding: 15px; } .header-inner { padding: 24px 17px; }
+    .market-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
+    .market-card { min-height: 116px; padding: 12px; } .market-card strong { font-size: 19px; }
+    .panel-head { align-items: flex-start; flex-direction: column; } .toggle-button { width: 100%; }
   }
-  .note { color: var(--muted); font-size: 12px; }
-  footer { text-align: center; font-size: 11px; color: #999; padding: 24px; }
 </style>
 </head>
 <body>
+<div class="brand-line"></div>
 <header>
-  <h1>수원WM 데일리 종목 스크리닝<span class="badge">코스피+코스닥</span></h1>
-  <p>기관·외국인 수급 · 기술적지표 · 자사주 매입·소각 3항목 균등 스코어링</p>
+  <div class="header-inner">
+    <div class="eyebrow">SUWON WM · DAILY MARKET SCREEN</div>
+    <h1>데일리 종목 스크리닝</h1>
+    <p>시장 흐름과 수급·기술·공시 점수를 한 화면에서 확인합니다.</p>
+  </div>
 </header>
 <main>
-  <div class="meta">최종 업데이트: {{UPDATED_AT}} · 분석 완료: {{TOTAL_COUNT}}개 · 기본 상위 {{TOP_N}}개 표시</div>
-  <div class="disclaimer">
-    본 페이지는 공개된 시세·수급·공시 데이터를 기계적 기준으로 계산한 참고 자료이며, 특정 종목의 투자 권유나 수익률 예측이 아닙니다.
-    신규상장·거래정지·데이터 미제공 종목은 분석에서 제외될 수 있으므로 고객 안내 전 원자료를 확인해야 합니다.
-  </div>
-  <div class="controls">
-    <button id="toggle-all" class="toggle-button" type="button" aria-expanded="false">전체보기 ({{TOTAL_COUNT}}개)</button>
-  </div>
-  <div class="table-wrap">
-  <table id="score-table">
-    <thead>
-      <tr>
-        <th>종합순위</th><th>종목명</th><th>코드</th><th>종합점수</th><th>수급</th><th>기술</th><th>재료</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{ROWS}}
-    </tbody>
-  </table>
-  </div>
+  <section aria-labelledby="market-heading">
+    <div class="section-title">
+      <h2 id="market-heading">Market Snapshot</h2>
+      <p>국내·미국 전일 마감 / KOSPI200 선물 최근값</p>
+    </div>
+    <div class="market-grid">{{MARKET_CARDS}}</div>
+    <p class="market-note">출처: Npay 증권 공개 시세. KOSPI200 선물은 오전 06:30 KST 자동 실행 시 전일 야간 세션 종료 후 확인되는 최근값을 표시하며, 카드의 실제 체결시각을 함께 확인하세요. 지수 데이터가 누락되어도 종목 순위 생성은 계속됩니다.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="ranking-heading">
+    <div class="panel-head">
+      <div>
+        <h2 id="ranking-heading">Today’s Screening Top {{TOP_N}}</h2>
+        <div class="meta">업데이트 {{UPDATED_AT}} · KOSPI/KOSDAQ 시가총액 각 {{UNIVERSE_PER_MARKET}}개 대상 · 분석 완료 {{TOTAL_COUNT}}개</div>
+      </div>
+      <button id="toggle-all" class="toggle-button" type="button" aria-expanded="false">전체보기 ({{TOTAL_COUNT}}개)</button>
+    </div>
+    <div class="table-wrap">
+      <table id="score-table">
+        <thead><tr><th>순위</th><th>종목명</th><th>시장</th><th>코드</th><th>종합</th><th>수급</th><th>기술</th><th>재료</th></tr></thead>
+        <tbody>{{ROWS}}</tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="disclaimer">본 페이지는 공개된 시세·수급·공시 데이터를 기계적 기준으로 계산한 참고자료이며 투자 권유 또는 수익률 예측이 아닙니다. 신규상장·거래정지·데이터 미제공 종목은 분석 완료 수에서 제외될 수 있으므로 고객 안내 전 원자료를 확인하세요.</div>
 
   <section class="methodology">
     <h2>점수 산정 방법</h2>
     <div class="formula">종합점수 = 수급점수 × 1/3 + 기술점수 × 1/3 + 재료점수 × 1/3</div>
-
-    <h3>1. 수급점수(0~100점)</h3>
-    <p>최근 20거래일의 외국인 및 기관 순매수 수량에 해당일 종가를 곱한 추정 순매수대금을 합산한 뒤, 분석 종목 전체에서 최소·최대값 기준으로 0~100점으로 정규화합니다.</p>
-
-    <h3>2. 기술점수(0~100점)</h3>
-    <p>이동평균 정배열(최대 40점), RSI 구간(최대 30점), MACD 흐름(최대 20점), 거래량 급증(10점)을 합산하고 분석 종목 전체 기준으로 0~100점 정규화합니다.</p>
-
-    <h3>3. 재료점수(0~100점)</h3>
-    <p>최근 30일 DART 공시 제목에서 자기주식 관련 내용을 확인합니다. 소각 100점, 취득 80점, 처분 30점이며 복수 공시가 있으면 가장 높은 점수를 반영합니다.</p>
-
-    <h3>해석할 때 주의할 점</h3>
-    <p>각 점수는 당일 분석 대상 안에서의 상대점수입니다. 예상수익률이나 상승확률을 의미하지 않으며, 누락 데이터는 0점으로 처리됩니다.</p>
-    <p class="note">분석 범위: 네이버 시장가치 목록에서 수집 가능한 KOSPI·KOSDAQ 종목. 수급대금은 네이버 제공 순매수 수량×종가로 계산한 추정치입니다.</p>
+    <h3>1. 수급점수 (0~100)</h3>
+    <p>최근 20거래일 외국인·기관 순매수 수량에 해당일 종가를 곱한 추정 순매수대금을 합산한 뒤, 분석 완료 종목 안에서 0~100점으로 정규화합니다.</p>
+    <h3>2. 기술점수 (0~100)</h3>
+    <p>이동평균 정배열(최대 40점), RSI 구간(최대 30점), MACD 흐름(최대 20점), 거래량 급증(10점)을 합산한 뒤 0~100점으로 정규화합니다.</p>
+    <h3>3. 재료점수 (0~100)</h3>
+    <p>최근 30일 DART 공시 제목에서 자기주식 관련 내용을 확인합니다. 소각 100점, 취득 80점, 처분 30점이며 복수 공시는 최고점을 적용합니다.</p>
+    <h3>해석 기준</h3>
+    <p>모든 점수는 당일 분석 완료 종목 안에서의 상대점수이며 예상수익률이나 상승확률이 아닙니다. 누락 데이터는 기존 계산 규칙에 따라 0점 처리됩니다.</p>
+    <p class="note">분석 모집단: 매 실행 시점 네이버 시장가치 목록의 KOSPI·KOSDAQ 시가총액 상위 각 {{UNIVERSE_PER_MARKET}}개. 수급대금은 제공 순매수 수량×종가의 추정치입니다.</p>
   </section>
 </main>
-<footer>Generated automatically via GitHub Actions</footer>
+<footer>Automated with GitHub Actions · Internal reference dashboard</footer>
 <script>
   const table = document.getElementById("score-table");
   const toggleButton = document.getElementById("toggle-all");
@@ -160,44 +149,28 @@
 
   function updateVisibility() {
     const rows = Array.from(table.querySelectorAll("tbody tr"));
-    rows.forEach((row, index) => {
-      row.hidden = !expanded && index >= defaultCount;
-    });
-    toggleButton.textContent = expanded
-      ? "접기 (상위 " + defaultCount + "개)"
-      : "전체보기 (" + rows.length + "개)";
+    rows.forEach((row, index) => { row.hidden = !expanded && index >= defaultCount; });
+    toggleButton.textContent = expanded ? "접기 (상위 " + defaultCount + "개)" : "전체보기 (" + rows.length + "개)";
     toggleButton.setAttribute("aria-expanded", String(expanded));
   }
-
-  toggleButton.addEventListener("click", () => {
-    expanded = !expanded;
-    updateVisibility();
-  });
-
+  toggleButton.addEventListener("click", () => { expanded = !expanded; updateVisibility(); });
   document.querySelectorAll("#score-table th").forEach((th, idx) => {
     th.addEventListener("click", () => {
       const tbody = table.querySelector("tbody");
       const rows = Array.from(tbody.querySelectorAll("tr"));
       const asc = th.dataset.asc !== "true";
       rows.sort((a, b) => {
-        const av = a.children[idx].innerText;
-        const bv = b.children[idx].innerText;
-        const an = Number(av.replace(/,/g, ""));
-        const bn = Number(bv.replace(/,/g, ""));
-        if (av.trim() !== "" && bv.trim() !== "" && !Number.isNaN(an) && !Number.isNaN(bn)) {
-          return asc ? an - bn : bn - an;
-        }
+        const av = a.children[idx].innerText.trim(); const bv = b.children[idx].innerText.trim();
+        const an = Number(av.replace(/,/g, "")); const bn = Number(bv.replace(/,/g, ""));
+        if (av !== "" && bv !== "" && !Number.isNaN(an) && !Number.isNaN(bn)) return asc ? an - bn : bn - an;
         return asc ? av.localeCompare(bv, "ko") : bv.localeCompare(av, "ko");
       });
       rows.forEach(row => tbody.appendChild(row));
       table.querySelectorAll("th").forEach(cell => cell.dataset.asc = "false");
-      th.dataset.asc = String(asc);
-      updateVisibility();
+      th.dataset.asc = String(asc); updateVisibility();
     });
   });
-
   updateVisibility();
 </script>
 </body>
 </html>
-
