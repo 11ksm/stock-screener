@@ -3,6 +3,7 @@
 종목명은 가격 수집 단계에서 저장한 data/universe.csv를 사용합니다.
 """
 import os
+from html import escape
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -31,13 +32,13 @@ def get_name_map(tickers):
 
 def render_rows(df: pd.DataFrame) -> str:
     rows_html = []
-    top = df.head(config.TOP_N).reset_index(drop=True)
-    for i, row in top.iterrows():
+    ranked = df.reset_index(drop=True)
+    for i, row in ranked.iterrows():
         rows_html.append(
             f"""<tr>
   <td>{i + 1}</td>
-  <td>{row.get('name', '')}</td>
-  <td>{row['ticker']}</td>
+  <td>{escape(str(row.get('name', '')))}</td>
+  <td>{escape(str(row['ticker']))}</td>
   <td class="score-total">{row['total_score']:.1f}</td>
   <td>{row['supply_score']:.1f}</td>
   <td>{row['tech_score']:.1f}</td>
@@ -61,6 +62,7 @@ def generate():
     html = template.replace("{{ROWS}}", render_rows(df))
     html = html.replace("{{UPDATED_AT}}", updated_at)
     html = html.replace("{{TOTAL_COUNT}}", str(len(df)))
+    html = html.replace("{{TOP_N}}", str(config.TOP_N))
 
     os.makedirs(config.DOCS_DIR, exist_ok=True)
     with open(os.path.join(config.DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
@@ -70,3 +72,4 @@ def generate():
 
 if __name__ == "__main__":
     generate()
+
