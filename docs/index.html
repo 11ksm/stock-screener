@@ -1,8 +1,568 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>수원WM 데일리 종목 스크리닝</title></head>
-<body style="font-family: sans-serif; padding: 40px; text-align:center; color:#0b1f3a;">
-  <h2>아직 첫 자동 업데이트가 실행되지 않았습니다</h2>
-  <p>Actions 탭에서 "Daily Stock Screening" 워크플로우를 수동 실행(Run workflow)하면<br>이 페이지가 실제 스크리닝 결과로 자동 교체됩니다.</p>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수원WM 데일리 종목 스크리닝</title>
+<style>
+  :root {
+    --navy: #0b1f3a;
+    --orange: #e8621f;
+    --bg: #f6f7f9;
+    --border: #e2e5ea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: #1a1a1a;
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 24px 20px;
+  }
+  header h1 { margin: 0 0 4px; font-size: 20px; }
+  header p { margin: 0; font-size: 13px; opacity: 0.75; }
+  .badge {
+    display: inline-block;
+    background: var(--orange);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  main { padding: 16px; max-width: 1000px; margin: 0 auto; }
+  .meta { font-size: 13px; color: #555; margin-bottom: 12px; }
+  .disclaimer {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #7c4a1e;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    font-size: 13px;
+    min-width: 560px;
+  }
+  th, td {
+    padding: 8px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th { background: #eef1f6; color: var(--navy); cursor: pointer; font-size: 12px; }
+  td:nth-child(2) { text-align: left; font-weight: 600; }
+  .score-total { color: var(--orange); font-weight: 700; }
+  footer { text-align: center; font-size: 11px; color: #999; padding: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>수원WM 데일리 종목 스크리닝<span class="badge">코스피+코스닥</span></h1>
+  <p>기관/외국인 수급 · 기술적지표 · 자사주 매입/소각 3항목 균등 스코어링</p>
+</header>
+<main>
+  <div class="meta">최종 업데이트: 2026-09-15 14:50 KST · 분석 종목 수: 677개 · 상위 종목 표시</div>
+  <div class="disclaimer">
+    본 페이지는 공개된 시세·수급·공시 데이터를 기계적 기준으로 스코어링한 참고 자료이며, 특정 종목에 대한 투자 권유나 매매 추천이 아닙니다.
+    최종 투자 판단과 그에 따른 책임은 이용자 본인에게 있습니다.
+  </div>
+  <div class="table-wrap">
+  <table id="score-table">
+    <thead>
+      <tr>
+        <th>순위</th><th>종목명</th><th>코드</th><th>종합점수</th><th>수급</th><th>기술</th><th>재료</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+  <td>1</td>
+  <td>저스템</td>
+  <td>417840</td>
+  <td class="score-total">80.9</td>
+  <td>82.8</td>
+  <td>80.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>메리츠금융지주</td>
+  <td>138040</td>
+  <td class="score-total">77.9</td>
+  <td>83.8</td>
+  <td>70.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>금호석유화학</td>
+  <td>011780</td>
+  <td class="score-total">72.6</td>
+  <td>82.8</td>
+  <td>55.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>SK스퀘어</td>
+  <td>402340</td>
+  <td class="score-total">70.2</td>
+  <td>85.5</td>
+  <td>45.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>피엔티</td>
+  <td>137400</td>
+  <td class="score-total">69.2</td>
+  <td>82.6</td>
+  <td>45.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>원익홀딩스</td>
+  <td>030530</td>
+  <td class="score-total">67.5</td>
+  <td>82.6</td>
+  <td>90.0</td>
+  <td>30.0</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>HPSP</td>
+  <td>403870</td>
+  <td class="score-total">61.6</td>
+  <td>84.9</td>
+  <td>70.0</td>
+  <td>30.0</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>POSCO홀딩스</td>
+  <td>005490</td>
+  <td class="score-total">61.0</td>
+  <td>83.1</td>
+  <td>70.0</td>
+  <td>30.0</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>에스피지</td>
+  <td>058610</td>
+  <td class="score-total">61.0</td>
+  <td>83.0</td>
+  <td>100.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>코스모신소재</td>
+  <td>005070</td>
+  <td class="score-total">60.9</td>
+  <td>82.7</td>
+  <td>100.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td>나노신소재</td>
+  <td>121600</td>
+  <td class="score-total">60.9</td>
+  <td>82.6</td>
+  <td>100.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td>에프에스티</td>
+  <td>036810</td>
+  <td class="score-total">60.9</td>
+  <td>82.6</td>
+  <td>70.0</td>
+  <td>30.0</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td>포스코인터내셔널</td>
+  <td>047050</td>
+  <td class="score-total">60.0</td>
+  <td>100.0</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td>유바이오로직스</td>
+  <td>206650</td>
+  <td class="score-total">59.2</td>
+  <td>82.6</td>
+  <td>15.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td>KT</td>
+  <td>030200</td>
+  <td class="score-total">59.2</td>
+  <td>82.5</td>
+  <td>15.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td>우리금융지주</td>
+  <td>316140</td>
+  <td class="score-total">57.8</td>
+  <td>93.3</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td>네패스</td>
+  <td>033640</td>
+  <td class="score-total">57.6</td>
+  <td>82.7</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td>대신증권</td>
+  <td>003540</td>
+  <td class="score-total">57.6</td>
+  <td>82.7</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td>코리안리</td>
+  <td>003690</td>
+  <td class="score-total">57.6</td>
+  <td>82.7</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td>글로벌텍스프리</td>
+  <td>204620</td>
+  <td class="score-total">57.6</td>
+  <td>82.7</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td>하이젠알앤엠</td>
+  <td>160190</td>
+  <td class="score-total">57.6</td>
+  <td>82.7</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td>비츠로넥스텍</td>
+  <td>488900</td>
+  <td class="score-total">57.6</td>
+  <td>82.7</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td>위메이드맥스</td>
+  <td>101730</td>
+  <td class="score-total">57.6</td>
+  <td>82.7</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>24</td>
+  <td>에스비비테크</td>
+  <td>389500</td>
+  <td class="score-total">57.5</td>
+  <td>82.6</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>25</td>
+  <td>파인엠텍</td>
+  <td>441270</td>
+  <td class="score-total">57.5</td>
+  <td>82.6</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>26</td>
+  <td>코웨이</td>
+  <td>021240</td>
+  <td class="score-total">57.5</td>
+  <td>82.6</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>27</td>
+  <td>미코</td>
+  <td>059090</td>
+  <td class="score-total">57.5</td>
+  <td>82.6</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>28</td>
+  <td>태광</td>
+  <td>023160</td>
+  <td class="score-total">57.5</td>
+  <td>82.5</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>29</td>
+  <td>RFHIC</td>
+  <td>218410</td>
+  <td class="score-total">57.4</td>
+  <td>82.2</td>
+  <td>60.0</td>
+  <td>30.0</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td>두산퓨얼셀</td>
+  <td>336260</td>
+  <td class="score-total">57.4</td>
+  <td>82.1</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>31</td>
+  <td>한전기술</td>
+  <td>052690</td>
+  <td class="score-total">57.3</td>
+  <td>81.8</td>
+  <td>90.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>32</td>
+  <td>SK이노베이션</td>
+  <td>096770</td>
+  <td class="score-total">56.4</td>
+  <td>89.1</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>33</td>
+  <td>주성엔지니어링</td>
+  <td>036930</td>
+  <td class="score-total">55.7</td>
+  <td>87.1</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>34</td>
+  <td>대한항공</td>
+  <td>003490</td>
+  <td class="score-total">55.6</td>
+  <td>86.7</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>35</td>
+  <td>포스코DX</td>
+  <td>022100</td>
+  <td class="score-total">55.4</td>
+  <td>86.2</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>36</td>
+  <td>한미반도체</td>
+  <td>042700</td>
+  <td class="score-total">55.1</td>
+  <td>85.3</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>37</td>
+  <td>삼성E&A</td>
+  <td>028050</td>
+  <td class="score-total">54.7</td>
+  <td>84.1</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>38</td>
+  <td>GS건설</td>
+  <td>006360</td>
+  <td class="score-total">54.6</td>
+  <td>83.9</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>39</td>
+  <td>신한지주</td>
+  <td>055550</td>
+  <td class="score-total">54.6</td>
+  <td>83.8</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>40</td>
+  <td>KB금융</td>
+  <td>105560</td>
+  <td class="score-total">54.6</td>
+  <td>83.7</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>41</td>
+  <td>HD현대</td>
+  <td>267250</td>
+  <td class="score-total">54.5</td>
+  <td>83.5</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>42</td>
+  <td>삼성전자</td>
+  <td>005930</td>
+  <td class="score-total">54.4</td>
+  <td>68.3</td>
+  <td>15.0</td>
+  <td>80.0</td>
+</tr>
+<tr>
+  <td>43</td>
+  <td>하나금융지주</td>
+  <td>086790</td>
+  <td class="score-total">54.4</td>
+  <td>83.2</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>44</td>
+  <td>한화</td>
+  <td>000880</td>
+  <td class="score-total">54.4</td>
+  <td>83.2</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>45</td>
+  <td>씨에스윈드</td>
+  <td>112610</td>
+  <td class="score-total">54.3</td>
+  <td>83.0</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>46</td>
+  <td>HD현대마린솔루션</td>
+  <td>443060</td>
+  <td class="score-total">54.3</td>
+  <td>83.0</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>47</td>
+  <td>이오테크닉스</td>
+  <td>039030</td>
+  <td class="score-total">54.3</td>
+  <td>82.9</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>48</td>
+  <td>티씨케이</td>
+  <td>064760</td>
+  <td class="score-total">54.3</td>
+  <td>82.9</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>49</td>
+  <td>마이크로컨텍솔</td>
+  <td>098120</td>
+  <td class="score-total">54.3</td>
+  <td>82.9</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+<tr>
+  <td>50</td>
+  <td>티에프이</td>
+  <td>425420</td>
+  <td class="score-total">54.3</td>
+  <td>82.8</td>
+  <td>80.0</td>
+  <td>0.0</td>
+</tr>
+    </tbody>
+  </table>
+  </div>
+</main>
+<footer>Generated automatically via GitHub Actions</footer>
+<script>
+  document.querySelectorAll("#score-table th").forEach((th, idx) => {
+    th.addEventListener("click", () => {
+      const table = th.closest("table");
+      const tbody = table.querySelector("tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      const asc = th.dataset.asc !== "true";
+      rows.sort((a, b) => {
+        const av = a.children[idx].innerText;
+        const bv = b.children[idx].innerText;
+        const an = parseFloat(av), bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+        return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+      rows.forEach(r => tbody.appendChild(r));
+      table.querySelectorAll("th").forEach(t => t.dataset.asc = "false");
+      th.dataset.asc = asc;
+    });
+  });
+</script>
 </body>
 </html>
