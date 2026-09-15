@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수원WM 데일리 종목 스크리닝</title>
+<style>
+  :root {
+    --navy: #0b1f3a;
+    --orange: #e8621f;
+    --bg: #f6f7f9;
+    --border: #e2e5ea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: #1a1a1a;
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 24px 20px;
+  }
+  header h1 { margin: 0 0 4px; font-size: 20px; }
+  header p { margin: 0; font-size: 13px; opacity: 0.75; }
+  .badge {
+    display: inline-block;
+    background: var(--orange);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  main { padding: 16px; max-width: 1000px; margin: 0 auto; }
+  .meta { font-size: 13px; color: #555; margin-bottom: 12px; }
+  .disclaimer {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #7c4a1e;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    font-size: 13px;
+    min-width: 560px;
+  }
+  th, td {
+    padding: 8px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th { background: #eef1f6; color: var(--navy); cursor: pointer; font-size: 12px; }
+  td:nth-child(2) { text-align: left; font-weight: 600; }
+  .score-total { color: var(--orange); font-weight: 700; }
+  footer { text-align: center; font-size: 11px; color: #999; padding: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>수원WM 데일리 종목 스크리닝<span class="badge">코스피+코스닥</span></h1>
+  <p>기관/외국인 수급 · 기술적지표 · 자사주 매입/소각 3항목 균등 스코어링</p>
+</header>
+<main>
+  <div class="meta">최종 업데이트: {{UPDATED_AT}} · 분석 종목 수: {{TOTAL_COUNT}}개 · 상위 종목 표시</div>
+  <div class="disclaimer">
+    본 페이지는 공개된 시세·수급·공시 데이터를 기계적 기준으로 스코어링한 참고 자료이며, 특정 종목에 대한 투자 권유나 매매 추천이 아닙니다.
+    최종 투자 판단과 그에 따른 책임은 이용자 본인에게 있습니다.
+  </div>
+  <div class="table-wrap">
+  <table id="score-table">
+    <thead>
+      <tr>
+        <th>순위</th><th>종목명</th><th>코드</th><th>종합점수</th><th>수급</th><th>기술</th><th>재료</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ROWS}}
+    </tbody>
+  </table>
+  </div>
+</main>
+<footer>Generated automatically via GitHub Actions</footer>
+<script>
+  document.querySelectorAll("#score-table th").forEach((th, idx) => {
+    th.addEventListener("click", () => {
+      const table = th.closest("table");
+      const tbody = table.querySelector("tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      const asc = th.dataset.asc !== "true";
+      rows.sort((a, b) => {
+        const av = a.children[idx].innerText;
+        const bv = b.children[idx].innerText;
+        const an = parseFloat(av), bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+        return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+      rows.forEach(r => tbody.appendChild(r));
+      table.querySelectorAll("th").forEach(t => t.dataset.asc = "false");
+      th.dataset.asc = asc;
+    });
+  });
+</script>
+</body>
+</html>
