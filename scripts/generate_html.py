@@ -1,25 +1,32 @@
 """
 스코어링 결과를 정적 HTML 홈페이지(docs/index.html)로 렌더링합니다.
-GitHub Pages가 docs/ 폴더를 서빙하도록 설정하면 이 파일이 곧 홈페이지가 됩니다.
+종목명은 가격 수집 단계에서 저장한 data/universe.csv를 사용합니다.
 """
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
-import config
-from pykrx import stock
 
-TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "index_template.html")
+import config
+
+
+TEMPLATE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "templates",
+    "index_template.html",
+)
 
 
 def get_name_map(tickers):
-    name_map = {}
-    for t in tickers:
-        try:
-            name_map[t] = stock.get_market_ticker_name(t)
-        except Exception:
-            name_map[t] = t
-    return name_map
+    universe_path = os.path.join(config.DATA_DIR, "universe.csv")
+    if not os.path.exists(universe_path):
+        return {ticker: ticker for ticker in tickers}
+    universe = pd.read_csv(universe_path, dtype={"ticker": str})
+    if "ticker" not in universe.columns or "name" not in universe.columns:
+        return {ticker: ticker for ticker in tickers}
+    universe["ticker"] = universe["ticker"].astype(str).str.zfill(6)
+    return dict(zip(universe["ticker"], universe["name"]))
 
 
 def render_rows(df: pd.DataFrame) -> str:
@@ -45,12 +52,12 @@ def generate():
     df = pd.read_csv(scores_path)
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
     name_map = get_name_map(df["ticker"].tolist())
-    df["name"] = df["ticker"].map(name_map)
+    df["name"] = df["ticker"].map(name_map).fillna(df["ticker"])
 
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = f.read()
 
-    updated_at = datetime.now().strftime("%Y-%m-%d %H:%M KST")
+    updated_at = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST")
     html = template.replace("{{ROWS}}", render_rows(df))
     html = html.replace("{{UPDATED_AT}}", updated_at)
     html = html.replace("{{TOTAL_COUNT}}", str(len(df)))
