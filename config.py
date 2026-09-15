@@ -21,7 +21,7 @@ WEIGHT_TECHNICAL = 1 / 3       # 기술적지표
 WEIGHT_EVENT = 1 / 3           # 자사주 매입/소각 등 재료성 이벤트
 
 # ===== 결과 노출 개수 =====
-TOP_N = 50  # 홈페이지에 표시할 상위 종목 수
+TOP_N = 10  # 처음 화면에 표시할 상위 종목 수(전체보기 버튼으로 전 종목 확인)
 
 # ===== DART Open API =====
 # https://opendart.fss.or.kr 에서 무료 회원가입 후 발급받은 인증키를
@@ -31,3 +31,4 @@ DART_API_KEY = os.environ.get("DART_API_KEY", "")
 # ===== 경로 =====
 DATA_DIR = "data"
 DOCS_DIR = "docs"
+
