@@ -135,31 +135,39 @@ def _price_rows(payload):
 
 
 def _fetch_one(ticker: str):
-    payload = _get_json(
-        f"{BASE_URL}/api/stock/{ticker}/price",
-        params={"pageSize": max(90, int(config.PRICE_LOOKBACK_DAYS)), "page": 1},
-        referer=f"{BASE_URL}/domestic/stock/{ticker}/total",
-    )
     records = []
-    for item in _price_rows(payload):
-        if not isinstance(item, dict):
-            continue
-        date = _first(item, ["localTradedAt", "localDate", "date"])
-        close = _number(_first(item, ["closePrice", "close", "종가"]))
-        if not date or close <= 0:
-            continue
-        records.append(
-            {
-                "날짜": str(date)[:10],
-                "시가": _number(_first(item, ["openPrice", "open", "시가"])),
-                "고가": _number(_first(item, ["highPrice", "high", "고가"])),
-                "저가": _number(_first(item, ["lowPrice", "low", "저가"])),
-                "종가": close,
-                "거래량": _number(
-                    _first(item, ["accumulatedTradingVolume", "tradingVolume", "volume", "거래량"])
-                ),
-            }
+    # Naver's mobile endpoint rejects large pageSize values in Actions.
+    # Request 20 rows per page and walk enough pages for the configured lookback.
+    page_size = 20
+    pages = max(3, (int(config.PRICE_LOOKBACK_DAYS) + page_size - 1) // page_size)
+    for page in range(1, pages + 1):
+        payload = _get_json(
+            f"{BASE_URL}/api/stock/{ticker}/price",
+            params={"pageSize": page_size, "page": page},
+            referer=f"{BASE_URL}/domestic/stock/{ticker}/total",
         )
+        page_rows = _price_rows(payload)
+        if not page_rows:
+            break
+        for item in page_rows:
+            if not isinstance(item, dict):
+                continue
+            date = _first(item, ["localTradedAt", "localDate", "date"])
+            close = _number(_first(item, ["closePrice", "close", "종가"]))
+            if not date or close <= 0:
+                continue
+            records.append(
+                {
+                    "날짜": str(date)[:10],
+                    "시가": _number(_first(item, ["openPrice", "open", "시가"])),
+                    "고가": _number(_first(item, ["highPrice", "high", "고가"])),
+                    "저가": _number(_first(item, ["lowPrice", "low", "저가"])),
+                    "종가": close,
+                    "거래량": _number(
+                        _first(item, ["accumulatedTradingVolume", "tradingVolume", "volume", "거래량"])
+                    ),
+                }
+            )
     if len(records) < 30:
         raise RuntimeError(f"일봉이 {len(records)}개뿐입니다")
     df = pd.DataFrame(records).drop_duplicates("날짜").sort_values("날짜")
