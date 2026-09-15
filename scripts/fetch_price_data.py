@@ -1,9 +1,9 @@
 """
-네이버 증권 공개 화면용 JSON에서 종목 목록과 일봉을 수집합니다.
+네이버 증권 공개 화면용 JSON에서 시가총액 상위 종목과 일봉을 수집합니다.
 
 주의: 공식 공개 API가 아니므로 응답 형식 변경 또는 차단 가능성이 있습니다.
-기본 수집 범위는 네이버가 제공하는 KOSPI/KOSDAQ 종목 목록 전체입니다.
-환경변수 NAVER_UNIVERSE_LIMIT_PER_MARKET로 시장별 최대 종목 수를 제한할 수 있습니다.
+기본 범위는 KOSPI·KOSDAQ 각각 시가총액 상위 300개입니다.
+환경변수 NAVER_UNIVERSE_LIMIT_PER_MARKET로 시장별 종목 수를 조정할 수 있습니다.
 """
 from __future__ import annotations
 
@@ -37,7 +37,12 @@ def _env_int(name: str, default: int, low: int, high: int) -> int:
     return max(low, min(value, high))
 
 
-UNIVERSE_LIMIT = _env_int("NAVER_UNIVERSE_LIMIT_PER_MARKET", 5000, 50, 5000)
+UNIVERSE_LIMIT = _env_int(
+    "NAVER_UNIVERSE_LIMIT_PER_MARKET",
+    getattr(config, "UNIVERSE_PER_MARKET", 300),
+    50,
+    1000,
+)
 WORKERS = _env_int("NAVER_MAX_WORKERS", 8, 1, 12)
 
 
@@ -104,8 +109,7 @@ def get_universe() -> pd.DataFrame:
                     continue
                 ticker = str(
                     _first(item, ["itemCode", "code", "stockCode", "symbolCode"]) or ""
-                )
-                ticker = ticker.strip().lstrip("A")
+                ).strip().lstrip("A")
                 if not re.fullmatch(r"\d{6}", ticker) or ticker in seen_tickers:
                     continue
                 seen_tickers.add(ticker)
@@ -116,10 +120,10 @@ def get_universe() -> pd.DataFrame:
                 break
             page += 1
 
-        if len(market_rows) < 10:
+        if len(market_rows) < min(50, UNIVERSE_LIMIT):
             raise RuntimeError(f"{market} 종목 목록이 너무 적습니다({len(market_rows)}개).")
-        rows.extend(market_rows)
-        print(f"[가격데이터] {market} 종목 목록 {len(market_rows)}개 확인")
+        rows.extend(market_rows[:UNIVERSE_LIMIT])
+        print(f"[가격데이터] {market} 시가총액 상위 {len(market_rows[:UNIVERSE_LIMIT])}개 확인")
 
     universe = pd.DataFrame(rows).drop_duplicates("ticker").reset_index(drop=True)
     os.makedirs(config.DATA_DIR, exist_ok=True)
@@ -142,8 +146,6 @@ def _price_rows(payload):
 
 def _fetch_one(ticker: str):
     records = []
-    # Naver's mobile endpoint rejects large pageSize values in Actions.
-    # Request 20 rows per page and walk enough pages for the configured lookback.
     page_size = 20
     pages = max(3, (int(config.PRICE_LOOKBACK_DAYS) + page_size - 1) // page_size)
     for page in range(1, pages + 1):
@@ -216,4 +218,3 @@ def fetch_all_prices():
 
 if __name__ == "__main__":
     fetch_all_prices()
-
