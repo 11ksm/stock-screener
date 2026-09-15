@@ -1,10 +1,8 @@
-"""
-스코어링 결과를 정적 HTML 홈페이지(docs/index.html)로 렌더링합니다.
-종목명은 가격 수집 단계에서 저장한 data/universe.csv를 사용합니다.
-"""
+"""스코어와 시장지수를 정적 HTML 홈페이지(docs/index.html)로 렌더링합니다."""
+import json
 import os
-from html import escape
 from datetime import datetime
+from html import escape
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -19,26 +17,33 @@ TEMPLATE_PATH = os.path.join(
 )
 
 
-def get_name_map(tickers):
-    universe_path = os.path.join(config.DATA_DIR, "universe.csv")
-    if not os.path.exists(universe_path):
-        return {ticker: ticker for ticker in tickers}
-    universe = pd.read_csv(universe_path, dtype={"ticker": str})
-    if "ticker" not in universe.columns or "name" not in universe.columns:
-        return {ticker: ticker for ticker in tickers}
+def get_universe_map(tickers):
+    fallback = {ticker: {"name": ticker, "market": "-"} for ticker in tickers}
+    path = os.path.join(config.DATA_DIR, "universe.csv")
+    if not os.path.exists(path):
+        return fallback
+    universe = pd.read_csv(path, dtype={"ticker": str})
+    if not {"ticker", "name"}.issubset(universe.columns):
+        return fallback
     universe["ticker"] = universe["ticker"].astype(str).str.zfill(6)
-    return dict(zip(universe["ticker"], universe["name"]))
+    if "market" not in universe.columns:
+        universe["market"] = "-"
+    return {
+        row["ticker"]: {"name": row["name"], "market": row["market"]}
+        for _, row in universe.iterrows()
+    }
 
 
 def render_rows(df: pd.DataFrame) -> str:
     rows_html = []
-    ranked = df.reset_index(drop=True)
-    for i, row in ranked.iterrows():
+    for i, row in df.reset_index(drop=True).iterrows():
+        market = escape(str(row.get("market", "-")))
         rows_html.append(
             f"""<tr>
-  <td>{i + 1}</td>
-  <td>{escape(str(row.get('name', '')))}</td>
-  <td>{escape(str(row['ticker']))}</td>
+  <td class="rank">{i + 1}</td>
+  <td class="stock-name">{escape(str(row.get('name', '')))}</td>
+  <td><span class="market-badge">{market}</span></td>
+  <td class="ticker">{escape(str(row['ticker']))}</td>
   <td class="score-total">{row['total_score']:.1f}</td>
   <td>{row['supply_score']:.1f}</td>
   <td>{row['tech_score']:.1f}</td>
@@ -48,28 +53,97 @@ def render_rows(df: pd.DataFrame) -> str:
     return "\n".join(rows_html)
 
 
+def _format_value(value):
+    if value is None:
+        return "-"
+    return f"{float(value):,.2f}"
+
+
+def _format_signed(value, suffix=""):
+    if value is None:
+        return "-"
+    number = float(value)
+    return f"{number:+,.2f}{suffix}"
+
+
+def _format_as_of(value):
+    if not value:
+        return "기준시각 없음"
+    try:
+        traded_at = datetime.fromisoformat(value)
+        return traded_at.strftime("%m/%d %H:%M")
+    except (TypeError, ValueError):
+        return escape(str(value))
+
+
+def load_market_items():
+    path = os.path.join(config.DATA_DIR, "market_indices.json")
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as file:
+            payload = json.load(file)
+        return payload.get("items", []) if isinstance(payload, dict) else []
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def render_market_cards(items):
+    cards = []
+    for item in items:
+        status = item.get("status")
+        change = item.get("change")
+        direction = "flat"
+        if isinstance(change, (int, float)):
+            direction = "up" if change > 0 else "down" if change < 0 else "flat"
+        if status != "ok" or item.get("value") is None:
+            cards.append(
+                f"""<article class="market-card unavailable">
+  <div class="market-card-top"><span>{escape(str(item.get('short_name', '-')))}</span><span class="status-dot"></span></div>
+  <strong>데이터 없음</strong>
+  <p>{escape(str(item.get('name', '')))}</p>
+</article>"""
+            )
+            continue
+        delay = escape(str(item.get("delay", "")))
+        delay_text = f" · {delay}" if delay else ""
+        cards.append(
+            f"""<article class="market-card {direction}">
+  <div class="market-card-top"><span>{escape(str(item.get('short_name', '-')))}</span><span class="status-dot"></span></div>
+  <strong>{_format_value(item.get('value'))}</strong>
+  <p>{_format_signed(item.get('change'))} <b>{_format_signed(item.get('change_rate'), '%')}</b></p>
+  <small>{_format_as_of(item.get('as_of'))}{delay_text}</small>
+</article>"""
+        )
+    if not cards:
+        return '<div class="market-empty">시장지수 데이터를 불러오지 못했습니다. 종목 순위는 정상적으로 표시됩니다.</div>'
+    return "\n".join(cards)
+
+
 def generate():
     scores_path = os.path.join(config.DATA_DIR, "scores.csv")
     df = pd.read_csv(scores_path)
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
-    name_map = get_name_map(df["ticker"].tolist())
-    df["name"] = df["ticker"].map(name_map).fillna(df["ticker"])
+    universe_map = get_universe_map(df["ticker"].tolist())
+    df["name"] = df["ticker"].map(lambda ticker: universe_map.get(ticker, {}).get("name", ticker))
+    df["market"] = df["ticker"].map(lambda ticker: universe_map.get(ticker, {}).get("market", "-"))
 
-    with open(TEMPLATE_PATH, encoding="utf-8") as f:
-        template = f.read()
+    with open(TEMPLATE_PATH, encoding="utf-8") as file:
+        template = file.read()
 
     updated_at = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST")
-    html = template.replace("{{ROWS}}", render_rows(df))
+    html = template.replace("{{MARKET_CARDS}}", render_market_cards(load_market_items()))
+    html = html.replace("{{ROWS}}", render_rows(df))
     html = html.replace("{{UPDATED_AT}}", updated_at)
     html = html.replace("{{TOTAL_COUNT}}", str(len(df)))
     html = html.replace("{{TOP_N}}", str(config.TOP_N))
+    html = html.replace("{{UNIVERSE_PER_MARKET}}", str(config.UNIVERSE_PER_MARKET))
 
     os.makedirs(config.DOCS_DIR, exist_ok=True)
-    with open(os.path.join(config.DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
-        f.write(html)
+    with open(os.path.join(config.DOCS_DIR, "index.html"), "w", encoding="utf-8") as file:
+        file.write(html)
     print("[홈페이지] docs/index.html 생성 완료")
 
 
 if __name__ == "__main__":
     generate()
-
