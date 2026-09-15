@@ -2,8 +2,8 @@
 네이버 증권 공개 화면용 JSON에서 종목 목록과 일봉을 수집합니다.
 
 주의: 공식 공개 API가 아니므로 응답 형식 변경 또는 차단 가능성이 있습니다.
-기본 수집 범위는 KOSPI/KOSDAQ 시가총액 상위 300종목씩입니다.
-환경변수 NAVER_UNIVERSE_LIMIT_PER_MARKET로 시장별 종목 수를 조정할 수 있습니다.
+기본 수집 범위는 네이버가 제공하는 KOSPI/KOSDAQ 종목 목록 전체입니다.
+환경변수 NAVER_UNIVERSE_LIMIT_PER_MARKET로 시장별 최대 종목 수를 제한할 수 있습니다.
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def _env_int(name: str, default: int, low: int, high: int) -> int:
     return max(low, min(value, high))
 
 
-UNIVERSE_LIMIT = _env_int("NAVER_UNIVERSE_LIMIT_PER_MARKET", 300, 50, 1000)
+UNIVERSE_LIMIT = _env_int("NAVER_UNIVERSE_LIMIT_PER_MARKET", 5000, 50, 5000)
 WORKERS = _env_int("NAVER_MAX_WORKERS", 8, 1, 12)
 
 
@@ -83,6 +83,7 @@ def get_universe() -> pd.DataFrame:
     rows = []
     for market in config.MARKETS:
         market_rows = []
+        seen_tickers = set()
         page = 1
         while len(market_rows) < UNIVERSE_LIMIT:
             page_size = min(100, UNIVERSE_LIMIT - len(market_rows))
@@ -97,6 +98,7 @@ def get_universe() -> pd.DataFrame:
             if not stocks:
                 break
 
+            added_this_page = 0
             for item in stocks:
                 if not isinstance(item, dict):
                     continue
@@ -104,10 +106,14 @@ def get_universe() -> pd.DataFrame:
                     _first(item, ["itemCode", "code", "stockCode", "symbolCode"]) or ""
                 )
                 ticker = ticker.strip().lstrip("A")
-                if not re.fullmatch(r"\d{6}", ticker):
+                if not re.fullmatch(r"\d{6}", ticker) or ticker in seen_tickers:
                     continue
+                seen_tickers.add(ticker)
+                added_this_page += 1
                 name = str(_first(item, ["stockName", "name", "itemName"]) or ticker).strip()
                 market_rows.append({"ticker": ticker, "name": name, "market": market})
+            if added_this_page == 0 or len(stocks) < page_size:
+                break
             page += 1
 
         if len(market_rows) < 10:
@@ -210,3 +216,4 @@ def fetch_all_prices():
 
 if __name__ == "__main__":
     fetch_all_prices()
+
