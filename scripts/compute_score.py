@@ -11,6 +11,16 @@ import numpy as np
 import config
 
 
+def _read_csv_or_empty(path: str, columns: list[str]) -> pd.DataFrame:
+    """누락·0바이트·파싱 불가 CSV를 스코어 0건 데이터로 안전하게 처리합니다."""
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        return pd.DataFrame(columns=columns)
+    try:
+        return pd.read_csv(path)
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError):
+        return pd.DataFrame(columns=columns)
+
+
 def _normalize_ticker(series: pd.Series) -> pd.Series:
     """종목코드를 병합 가능한 6자리 문자열로 통일합니다."""
     return (
@@ -96,10 +106,13 @@ def score_technical() -> pd.DataFrame:
 
 def score_supply_demand() -> pd.DataFrame:
     path = os.path.join(config.DATA_DIR, "investor_flows.csv")
-    if not os.path.exists(path):
+    df = _read_csv_or_empty(path, ["ticker", "순매수거래대금"])
+    required = {"ticker", "순매수거래대금"}
+    if df.empty or not required.issubset(df.columns):
         return pd.DataFrame(columns=["ticker", "supply_raw"])
-    df = pd.read_csv(path)
-    if df.empty or "ticker" not in df.columns:
+    df["순매수거래대금"] = pd.to_numeric(df["순매수거래대금"], errors="coerce")
+    df = df.dropna(subset=["ticker", "순매수거래대금"])
+    if df.empty:
         return pd.DataFrame(columns=["ticker", "supply_raw"])
     agg = df.groupby("ticker")["순매수거래대금"].sum().reset_index()
     agg.columns = ["ticker", "supply_raw"]
@@ -108,9 +121,12 @@ def score_supply_demand() -> pd.DataFrame:
 
 def score_event() -> pd.DataFrame:
     path = os.path.join(config.DATA_DIR, "buyback_events.csv")
-    if not os.path.exists(path):
+    df = _read_csv_or_empty(path, ["stock_code", "event_raw"])
+    required = {"stock_code", "event_raw"}
+    if df.empty or not required.issubset(df.columns):
         return pd.DataFrame(columns=["ticker", "event_raw"])
-    df = pd.read_csv(path)
+    df["event_raw"] = pd.to_numeric(df["event_raw"], errors="coerce")
+    df = df.dropna(subset=["stock_code", "event_raw"])
     if df.empty:
         return pd.DataFrame(columns=["ticker", "event_raw"])
     df["stock_code"] = df["stock_code"].astype(str).str.zfill(6)
@@ -158,4 +174,3 @@ def compute_scores() -> pd.DataFrame:
 
 if __name__ == "__main__":
     compute_scores()
-
