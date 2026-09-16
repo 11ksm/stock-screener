@@ -40,21 +40,19 @@ WORLD = {
     ".SOX": ("SOX", "필라델피아 반도체"),
 }
 
-TRADINGVIEW_SCAN_URL = "https://scanner.tradingview.com/global/scan"
-NIGHT_FUTURES_SYMBOL = "KRX:K2I1!"
-NIGHT_FUTURES_COLUMNS = [
-    "name",
-    "description",
-    "close",
-    "change",
-    "volume",
-    "update_mode",
-]
-NIGHT_FUTURES_HEADERS = {
+FEAR_GREED_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
+FEAR_GREED_HEADERS = {
     **HEADERS,
-    "Origin": "https://www.tradingview.com",
-    "Referer": "https://www.tradingview.com/",
-    "Content-Type": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Origin": "https://edition.cnn.com",
+    "Referer": "https://edition.cnn.com/",
+}
+FEAR_GREED_RATINGS = {
+    "extreme fear": ("Extreme Fear", "극도의 공포"),
+    "fear": ("Fear", "공포"),
+    "neutral": ("Neutral", "중립"),
+    "greed": ("Greed", "탐욕"),
+    "extreme greed": ("Extreme Greed", "극도의 탐욕"),
 }
 
 
@@ -151,68 +149,45 @@ def _fetch_group(path: str, definitions: dict, group: str, code_key: str):
         ]
 
 
-def _fetch_night_futures(now=None):
-    """오전 06:00에 끝난 KOSPI200 야간장의 마지막 지연 시세를 가져옵니다.
-
-    다음 야간장이 시작된 뒤 수동 실행하면 장중 값이 섞일 수 있으므로, 종료 후
-    충분한 지연시간을 둔 06:20~08:59 KST에만 값을 유효하게 처리합니다.
-    """
-    source = "TradingView KRX 연속선물"
-    now = now or datetime.now(ZoneInfo("Asia/Seoul"))
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=ZoneInfo("Asia/Seoul"))
-    else:
-        now = now.astimezone(ZoneInfo("Asia/Seoul"))
-
-    minute_of_day = now.hour * 60 + now.minute
-    if not (6 * 60 + 20 <= minute_of_day < 9 * 60):
-        return _unavailable(
-            "K2I1!",
-            "KOSPI200 야간",
-            "KOSPI 200 선물 야간장 종료값",
-            "night",
-            "오전 06:20~08:59 KST 수집값만 야간장 종료값으로 표시합니다.",
-            source,
-        )
-
-    payload = {
-        "symbols": {"tickers": [NIGHT_FUTURES_SYMBOL], "query": {"types": []}},
-        "columns": NIGHT_FUTURES_COLUMNS,
-    }
+def _fetch_fear_greed():
+    """CNN Fear & Greed Index의 최신 점수와 전일 대비 변화를 가져옵니다."""
+    source = "CNN Business"
     last_error = None
     for attempt in range(3):
         try:
-            response = requests.post(
-                TRADINGVIEW_SCAN_URL,
-                headers=NIGHT_FUTURES_HEADERS,
-                json=payload,
+            response = requests.get(
+                FEAR_GREED_URL,
+                headers=FEAR_GREED_HEADERS,
                 timeout=(10, 25),
             )
             response.raise_for_status()
-            result = response.json()
-            rows = result.get("data", []) if isinstance(result, dict) else []
-            values = rows[0].get("d", []) if rows and isinstance(rows[0], dict) else []
-            if len(values) < len(NIGHT_FUTURES_COLUMNS):
-                raise ValueError("야간선물 응답 항목이 부족합니다.")
+            payload = response.json()
+            row = payload.get("fear_and_greed", {}) if isinstance(payload, dict) else {}
+            score = _number(row.get("score"))
+            previous = _number(row.get("previous_close"))
+            if score is None or not 0 <= score <= 100:
+                raise ValueError("Fear & Greed 점수가 없거나 0~100 범위를 벗어났습니다.")
 
-            close = _number(values[2])
-            change_rate = _number(values[3])
-            if close is None or change_rate is None:
-                raise ValueError("야간선물 종가 또는 등락률이 없습니다.")
-            previous = close / (1 + change_rate / 100) if change_rate != -100 else None
-            change = close - previous if previous is not None else None
+            rating_key = str(row.get("rating", "")).strip().lower().replace("_", " ")
+            rating_en, rating_ko = FEAR_GREED_RATINGS.get(
+                rating_key,
+                (str(row.get("rating") or "Unclassified").title(), "구간 미분류"),
+            )
             return {
-                "code": "K2I1!",
-                "short_name": "KOSPI200 야간",
-                "name": "KOSPI 200 선물 야간장 종료값",
-                "group": "night",
+                "code": "CNN_FEAR_GREED",
+                "short_name": "Fear & Greed",
+                "name": "CNN Fear & Greed Index",
+                "group": "sentiment",
+                "display_mode": "sentiment",
                 "status": "ok",
-                "value": close,
-                "change": change,
-                "change_rate": change_rate,
-                "as_of": now.isoformat(timespec="minutes"),
+                "value": round(score, 1),
+                "change": round(score - previous, 1) if previous is not None else None,
+                "change_rate": None,
+                "rating": rating_en,
+                "rating_ko": rating_ko,
+                "as_of": str(row.get("timestamp", "")),
                 "market_status": "CLOSE",
-                "delay": "20분 지연 · 06:00 마감 후 수집",
+                "delay": "미국시장 심리",
                 "source": source,
             }
         except Exception as exc:
@@ -220,10 +195,10 @@ def _fetch_night_futures(now=None):
             if attempt + 1 < 3:
                 time.sleep(1.5 * (attempt + 1))
     return _unavailable(
-        "K2I1!",
-        "KOSPI200 야간",
-        "KOSPI 200 선물 야간장 종료값",
-        "night",
+        "CNN_FEAR_GREED",
+        "Fear & Greed",
+        "CNN Fear & Greed Index",
+        "sentiment",
         str(last_error),
         source,
     )
@@ -246,7 +221,7 @@ def fetch_market_indices():
     )
     payload = {
         "generated_at": datetime.now(ZoneInfo("Asia/Seoul")).isoformat(timespec="seconds"),
-        "items": domestic + [_fetch_night_futures()] + world,
+        "items": domestic + [_fetch_fear_greed()] + world,
     }
     os.makedirs(config.DATA_DIR, exist_ok=True)
     output_path = os.path.join(config.DATA_DIR, "market_indices.json")
