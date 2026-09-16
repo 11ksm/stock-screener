@@ -55,6 +55,10 @@
   .market-card.down { border-top-color: var(--down); } .market-card.down p { color: var(--down); } .market-card.down .status-dot { background: var(--down); }
   .market-card.unavailable { opacity: .72; } .market-card.unavailable strong { font-size: 17px; color: var(--muted); }
   .market-empty { grid-column: 1/-1; padding: 18px; background: #fff; border: 1px solid var(--line); color: var(--muted); }
+  .us-review { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; margin: 0 0 12px; padding: 16px 18px; background: var(--navy-950); color: #fff; border-radius: 7px; border-left: 5px solid var(--orange); }
+  .us-review-label { color: #ffb56f; font-size: 12px; font-weight: 900; letter-spacing: .04em; }
+  .us-review-copy strong { display: block; margin-bottom: 5px; font-size: 16px; }
+  .us-review-copy p { margin: 3px 0; color: rgba(255,255,255,.78); font-size: 11px; line-height: 1.5; }
   .market-note { margin: 0 0 22px; color: var(--muted); font-size: 11px; line-height: 1.55; }
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 5px 22px rgba(0,38,62,.05); overflow: hidden; }
   .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 17px 18px; border-bottom: 1px solid var(--line); }
@@ -86,6 +90,7 @@
     .market-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
     .market-card { min-height: 116px; padding: 12px; } .market-card strong { font-size: 19px; }
     .panel-head { align-items: flex-start; flex-direction: column; } .toggle-button { width: 100%; }
+    .us-review { grid-template-columns: 1fr; gap: 7px; }
   }
 </style>
 </head>
@@ -102,10 +107,14 @@
   <section aria-labelledby="market-heading">
     <div class="section-title">
       <h2 id="market-heading">Market Snapshot</h2>
-      <p>국내·미국 전일 마감 / KOSPI200 선물 최근값</p>
+      <p>국내·미국 전일 마감 / KOSPI200 야간장 종료값</p>
     </div>
     <div class="market-grid">{{MARKET_CARDS}}</div>
-    <p class="market-note">출처: Npay 증권 공개 시세. KOSPI200 선물은 오전 06:30 KST 자동 실행 시 전일 야간 세션 종료 후 확인되는 최근값을 표시하며, 카드의 실제 체결시각을 함께 확인하세요. 지수 데이터가 누락되어도 종목 순위 생성은 계속됩니다.</p>
+    <div class="us-review" aria-label="미국시장 리뷰">
+      <div class="us-review-label">US MARKET REVIEW</div>
+      {{US_MARKET_REVIEW}}
+    </div>
+    <p class="market-note">출처: 국내·미국 지수는 Npay 증권 공개 시세, KOSPI200 야간선물은 TradingView KRX 연속선물 지연 시세. 야간선물 카드는 평일 오전 07:00 KST 실행 시 오전 06:00에 종료된 세션의 마지막 값을 표시하며, 오전 06:20~08:59 수집값만 유효하게 처리합니다. 미국시장 리뷰는 주요 지수 등락률을 규칙으로 요약한 참고 문구입니다. 지수 데이터가 누락되어도 종목 순위 생성은 계속됩니다.</p>
   </section>
 
   <section class="panel" aria-labelledby="ranking-heading">
