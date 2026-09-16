@@ -26,16 +26,35 @@ COLUMNS = [
     "d5_close",
     "d5_return",
 ]
+TEXT_COLUMNS = ["screen_date", "ticker", "name", "entry_date", "d1_date", "d5_date"]
+NUMERIC_COLUMNS = [
+    "rank",
+    "total_score",
+    "entry_close",
+    "d1_close",
+    "d1_return",
+    "d5_close",
+    "d5_return",
+]
 
 
 def _load_history() -> pd.DataFrame:
     if not os.path.exists(HISTORY_PATH):
         return pd.DataFrame(columns=COLUMNS)
-    history = pd.read_csv(HISTORY_PATH, dtype={"ticker": str, "screen_date": str})
+    history = pd.read_csv(
+        HISTORY_PATH,
+        dtype={column: "string" for column in TEXT_COLUMNS},
+    )
     for column in COLUMNS:
         if column not in history.columns:
             history[column] = pd.NA
-    history["ticker"] = history["ticker"].astype(str).str.zfill(6)
+    # 값이 전부 비어 있는 날짜 열은 pandas가 float64로 추론할 수 있습니다.
+    # 이후 YYYY-MM-DD 문자열을 기록할 수 있도록 텍스트 열의 자료형을 고정합니다.
+    for column in TEXT_COLUMNS:
+        history[column] = history[column].astype("string")
+    for column in NUMERIC_COLUMNS:
+        history[column] = pd.to_numeric(history[column], errors="coerce")
+    history["ticker"] = history["ticker"].str.zfill(6)
     return history[COLUMNS]
 
 
