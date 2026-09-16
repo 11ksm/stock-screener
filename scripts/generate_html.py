@@ -106,6 +106,8 @@ def _format_as_of(value):
         return "기준시각 없음"
     try:
         traded_at = datetime.fromisoformat(value)
+        if traded_at.tzinfo is not None:
+            traded_at = traded_at.astimezone(ZoneInfo("Asia/Seoul"))
         return traded_at.strftime("%m/%d %H:%M")
     except (TypeError, ValueError):
         return escape(str(value))
@@ -193,6 +195,25 @@ def render_market_cards(items):
 </article>"""
             )
             continue
+        if item.get("display_mode") == "sentiment":
+            rating = str(item.get("rating", "Neutral"))
+            rating_class = rating.lower().replace(" ", "-")
+            change_text = (
+                f"전일 대비 {_format_signed(change, 'p')}"
+                if isinstance(change, (int, float))
+                else "전일 비교 없음"
+            )
+            delay = escape(str(item.get("delay", "")))
+            delay_text = f" · {delay}" if delay else ""
+            cards.append(
+                f"""<article class="market-card sentiment-card {escape(rating_class)}">
+  <div class="market-card-top"><span>{escape(str(item.get('short_name', '-')))}</span><span class="status-dot"></span></div>
+  <strong>{float(item.get('value')):.1f}</strong>
+  <p><b>{escape(rating)} · {escape(str(item.get('rating_ko', '구간 미분류')))}</b> <span>{escape(change_text)}</span></p>
+  <small>{_format_as_of(item.get('as_of'))}{delay_text}</small>
+</article>"""
+            )
+            continue
         delay = escape(str(item.get("delay", "")))
         delay_text = f" · {delay}" if delay else ""
         cards.append(
@@ -249,27 +270,40 @@ def render_us_market_review(items):
     else:
         style = "기술주와 반도체의 방향이 엇갈려 국내 시장에서도 업종별 차별화 가능성이 높습니다."
 
-    night_rate = next(
+    sentiment = next(
         (
-            item.get("change_rate")
+            item
             for item in items
-            if str(item.get("code")) == "K2I1!"
+            if str(item.get("code")) == "CNN_FEAR_GREED"
             and item.get("status") == "ok"
-            and isinstance(item.get("change_rate"), (int, float))
+            and isinstance(item.get("value"), (int, float))
         ),
         None,
     )
-    if night_rate is not None and night_rate > 0:
-        domestic = "KOSPI200 야간선물은 상승 마감해 국내 개장 초반 심리에 긍정적이나, 환율과 외국인 선물 수급을 함께 확인해야 합니다."
-    elif night_rate is not None and night_rate < 0:
-        domestic = "KOSPI200 야간선물은 하락 마감해 국내 개장 초반 경계감이 예상되며, 환율과 외국인 선물 수급 확인이 필요합니다."
+    if sentiment is None:
+        sentiment_text = "시장 심리지표가 미수집 상태이므로 주요 지수와 업종 흐름을 중심으로 해석할 필요가 있습니다."
     else:
-        domestic = "국내 개장 방향은 원·달러 환율과 외국인 선물 수급을 추가로 확인해야 합니다."
+        score = float(sentiment["value"])
+        rating_ko = str(sentiment.get("rating_ko", "구간 미분류"))
+        if score < 25:
+            interpretation = "투자심리 위축이 매우 강해 추가 변동성 위험과 기술적 반등 가능성이 함께 존재합니다."
+        elif score < 45:
+            interpretation = "위험선호가 위축된 구간으로, 방어적 수급과 낙폭과대주의 선별적 반등 여부를 함께 점검해야 합니다."
+        elif score <= 55:
+            interpretation = "투자심리가 중립권에 있어 지수보다 실적·수급에 따른 업종별 차별화가 중요합니다."
+        elif score <= 75:
+            interpretation = "위험선호가 우세하지만 상승 추세의 지속성과 단기 과열 가능성을 함께 살펴야 합니다."
+        else:
+            interpretation = "위험선호가 과도하게 높아 추격매수 부담과 변동성 확대 가능성에 유의할 필요가 있습니다."
+        sentiment_text = (
+            f"CNN Fear & Greed 지수는 ‘{rating_ko}’ 구간입니다. {interpretation} "
+            "이 지표만으로 저점·고점을 판단해서는 안 됩니다."
+        )
 
     return f"""<div class="us-review-copy">
   <strong>{escape(headline)}</strong>
   <p>{escape(style)}</p>
-  <p>{escape(domestic)}</p>
+  <p>{escape(sentiment_text)}</p>
 </div>"""
 
 
