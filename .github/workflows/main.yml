@@ -3,8 +3,8 @@ name: Daily Stock Screening
 on:
   workflow_dispatch:
   schedule:
-    # Monday-Friday at 06:30 Korea Standard Time
-    - cron: "30 21 * * 0-4"
+    # Monday-Friday at 07:00 Korea Standard Time (22:00 UTC, previous day)
+    - cron: "0 22 * * 0-4"
 
 permissions:
   contents: write
