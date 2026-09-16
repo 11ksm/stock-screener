@@ -120,6 +120,52 @@ def render_market_cards(items):
     return "\n".join(cards)
 
 
+def render_us_market_review(items):
+    labels = {
+        ".DJI": "다우",
+        ".INX": "S&P500",
+        ".IXIC": "나스닥",
+        ".SOX": "SOX",
+    }
+    rates = {
+        str(item.get("code")): item.get("change_rate")
+        for item in items
+        if item.get("status") == "ok"
+        and str(item.get("code")) in labels
+        and isinstance(item.get("change_rate"), (int, float))
+    }
+    if len(rates) < 3:
+        return """<div class="us-review-copy">
+  <strong>미국시장 리뷰 준비 중</strong>
+  <p>주요 미국지수 데이터가 충분하지 않아 자동 요약을 생성하지 않았습니다.</p>
+</div>"""
+
+    values = list(rates.values())
+    if all(value > 0 for value in values):
+        headline = "미국 증시 전반 상승"
+    elif all(value < 0 for value in values):
+        headline = "미국 증시 전반 하락"
+    else:
+        headline = "미국 증시 혼조"
+
+    rate_text = " · ".join(
+        f"{labels[code]} {float(rates[code]):+.2f}%" for code in labels if code in rates
+    )
+    sox = rates.get(".SOX")
+    if sox is not None and sox >= 1:
+        implication = "반도체지수 강세는 국내 반도체 투자심리에 우호적으로 작용할 수 있습니다."
+    elif sox is not None and sox <= -1:
+        implication = "반도체지수 약세로 국내 반도체주의 변동성 확대 가능성에 유의할 필요가 있습니다."
+    else:
+        implication = "기술주·반도체 흐름은 뚜렷한 방향성이 제한적인 구간입니다."
+
+    return f"""<div class="us-review-copy">
+  <strong>{escape(headline)}</strong>
+  <p>{escape(rate_text)}</p>
+  <p>{escape(implication)}</p>
+</div>"""
+
+
 def generate():
     scores_path = os.path.join(config.DATA_DIR, "scores.csv")
     df = pd.read_csv(scores_path)
@@ -132,7 +178,9 @@ def generate():
         template = file.read()
 
     updated_at = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST")
-    html = template.replace("{{MARKET_CARDS}}", render_market_cards(load_market_items()))
+    market_items = load_market_items()
+    html = template.replace("{{MARKET_CARDS}}", render_market_cards(market_items))
+    html = html.replace("{{US_MARKET_REVIEW}}", render_us_market_review(market_items))
     html = html.replace("{{ROWS}}", render_rows(df))
     html = html.replace("{{UPDATED_AT}}", updated_at)
     html = html.replace("{{TOTAL_COUNT}}", str(len(df)))
