@@ -34,20 +34,55 @@ def get_universe_map(tickers):
     }
 
 
-def render_rows(df: pd.DataFrame) -> str:
+def _performance_badge(label: str, item) -> str:
+    if not item:
+        return f'<span class="perf-badge pending">{escape(label)} 집계 전</span>'
+    value = float(item["return"])
+    direction = "positive" if value > 0 else "negative" if value < 0 else "flat"
+    title = (
+        f"{item['screen_date']} 선정 · 매수가 {float(item['entry_close']):,.0f}원 · "
+        f"평가일 {item['exit_date']} · 종가 {float(item['exit_close']):,.0f}원"
+    )
+    return (
+        f'<span class="perf-badge {direction}" title="{escape(title)}">'
+        f"{escape(label)} {value:+.2f}% ({escape(str(item['screen_date'])[5:].replace('-', '/'))})</span>"
+    )
+
+
+def render_rows(df: pd.DataFrame, profiles: dict, performance: dict) -> str:
     rows_html = []
     for i, row in df.reset_index(drop=True).iterrows():
+        ticker = str(row["ticker"]).zfill(6)
         market = escape(str(row.get("market", "-")))
+        profile = profiles.get(ticker, {}) if isinstance(profiles, dict) else {}
+        business = str(profile.get("summary") or profile.get("industry") or "기업개요 미수집")
+        perf = performance.get(ticker, {})
+        if ticker not in performance and i >= int(config.TOP_N):
+            performance_html = '<span class="perf-badge pending">추적 이력 없음</span>'
+        else:
+            performance_html = (
+                _performance_badge("1일", perf.get("d1"))
+                + _performance_badge("1주", perf.get("d5"))
+            )
         rows_html.append(
             f"""<tr>
   <td class="rank">{i + 1}</td>
-  <td class="stock-name">{escape(str(row.get('name', '')))}</td>
+  <td class="stock-cell">
+    <div class="stock-title"><span class="stock-name">{escape(str(row.get('name', '')))}</span>{performance_html}</div>
+    <div class="business-summary">{escape(business)}</div>
+  </td>
   <td><span class="market-badge">{market}</span></td>
-  <td class="ticker">{escape(str(row['ticker']))}</td>
-  <td class="score-total">{row['total_score']:.1f}</td>
-  <td>{row['supply_score']:.1f}</td>
-  <td>{row['tech_score']:.1f}</td>
-  <td>{row['event_score']:.1f}</td>
+  <td class="ticker">{escape(ticker)}</td>
+  <td class="score-total" data-sort-value="{float(row['total_score']):.4f}">
+    <details class="score-details">
+      <summary>{row['total_score']:.1f}</summary>
+      <div class="score-breakdown">
+        <span>수급 <b>{row['supply_score']:.1f}</b></span>
+        <span>기술 <b>{row['tech_score']:.1f}</b></span>
+        <span>재료 <b>{row['event_score']:.1f}</b></span>
+      </div>
+    </details>
+  </td>
 </tr>"""
         )
     return "\n".join(rows_html)
@@ -86,6 +121,59 @@ def load_market_items():
         return payload.get("items", []) if isinstance(payload, dict) else []
     except (OSError, json.JSONDecodeError):
         return []
+
+
+def load_company_profiles():
+    path = os.path.join(config.DATA_DIR, "company_profiles.json")
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as file:
+            payload = json.load(file)
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def load_performance_map():
+    path = os.path.join(config.DATA_DIR, "screening_history.csv")
+    if not os.path.exists(path):
+        return {}
+    try:
+        history = pd.read_csv(path, dtype={"ticker": str, "screen_date": str})
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError):
+        return {}
+    required = {"ticker", "screen_date", "entry_close", "d1_return", "d5_return"}
+    if not required.issubset(history.columns):
+        return {}
+    history["ticker"] = history["ticker"].astype(str).str.zfill(6)
+    history = history.sort_values("screen_date", ascending=False, kind="stable")
+    result = {}
+    horizon_columns = {
+        "d1": ("d1_return", "d1_date", "d1_close"),
+        "d5": ("d5_return", "d5_date", "d5_close"),
+    }
+    for ticker, group in history.groupby("ticker", sort=False):
+        result[ticker] = {}
+        for horizon, (return_col, date_col, close_col) in horizon_columns.items():
+            if not {return_col, date_col, close_col}.issubset(group.columns):
+                continue
+            values = group.copy()
+            values[return_col] = pd.to_numeric(values[return_col], errors="coerce")
+            values["entry_close"] = pd.to_numeric(values["entry_close"], errors="coerce")
+            values[close_col] = pd.to_numeric(values[close_col], errors="coerce")
+            values = values.dropna(subset=[return_col, "entry_close", close_col])
+            if values.empty:
+                continue
+            latest = values.iloc[0]
+            result[ticker][horizon] = {
+                "return": float(latest[return_col]),
+                "screen_date": str(latest["screen_date"]),
+                "entry_close": float(latest["entry_close"]),
+                "exit_date": str(latest[date_col]),
+                "exit_close": float(latest[close_col]),
+            }
+    return result
 
 
 def render_market_cards(items):
@@ -148,21 +236,40 @@ def render_us_market_review(items):
     else:
         headline = "미국 증시 혼조"
 
-    rate_text = " · ".join(
-        f"{labels[code]} {float(rates[code]):+.2f}%" for code in labels if code in rates
-    )
+    spx = rates.get(".INX")
+    nasdaq = rates.get(".IXIC")
     sox = rates.get(".SOX")
-    if sox is not None and sox >= 1:
-        implication = "반도체지수 강세는 국내 반도체 투자심리에 우호적으로 작용할 수 있습니다."
-    elif sox is not None and sox <= -1:
-        implication = "반도체지수 약세로 국내 반도체주의 변동성 확대 가능성에 유의할 필요가 있습니다."
+    if nasdaq is not None and sox is not None and nasdaq > 0 and sox > 0:
+        if spx is not None and sox > spx:
+            style = "반도체를 중심으로 성장주가 상대 우위를 보여 국내 대형 기술주 투자심리에 우호적일 수 있습니다."
+        else:
+            style = "기술주와 반도체가 동반 강세를 보여 국내 성장주 투자심리에 우호적일 수 있습니다."
+    elif nasdaq is not None and sox is not None and nasdaq < 0 and sox < 0:
+        style = "기술주와 반도체가 동반 약세를 보여 국내 성장주와 반도체주의 변동성 확대에 유의할 필요가 있습니다."
     else:
-        implication = "기술주·반도체 흐름은 뚜렷한 방향성이 제한적인 구간입니다."
+        style = "기술주와 반도체의 방향이 엇갈려 국내 시장에서도 업종별 차별화 가능성이 높습니다."
+
+    night_rate = next(
+        (
+            item.get("change_rate")
+            for item in items
+            if str(item.get("code")) == "K2I1!"
+            and item.get("status") == "ok"
+            and isinstance(item.get("change_rate"), (int, float))
+        ),
+        None,
+    )
+    if night_rate is not None and night_rate > 0:
+        domestic = "KOSPI200 야간선물은 상승 마감해 국내 개장 초반 심리에 긍정적이나, 환율과 외국인 선물 수급을 함께 확인해야 합니다."
+    elif night_rate is not None and night_rate < 0:
+        domestic = "KOSPI200 야간선물은 하락 마감해 국내 개장 초반 경계감이 예상되며, 환율과 외국인 선물 수급 확인이 필요합니다."
+    else:
+        domestic = "국내 개장 방향은 원·달러 환율과 외국인 선물 수급을 추가로 확인해야 합니다."
 
     return f"""<div class="us-review-copy">
   <strong>{escape(headline)}</strong>
-  <p>{escape(rate_text)}</p>
-  <p>{escape(implication)}</p>
+  <p>{escape(style)}</p>
+  <p>{escape(domestic)}</p>
 </div>"""
 
 
@@ -173,6 +280,7 @@ def generate():
     universe_map = get_universe_map(df["ticker"].tolist())
     df["name"] = df["ticker"].map(lambda ticker: universe_map.get(ticker, {}).get("name", ticker))
     df["market"] = df["ticker"].map(lambda ticker: universe_map.get(ticker, {}).get("market", "-"))
+    df = df.sort_values("total_score", ascending=False, kind="stable").reset_index(drop=True)
 
     with open(TEMPLATE_PATH, encoding="utf-8") as file:
         template = file.read()
@@ -181,7 +289,10 @@ def generate():
     market_items = load_market_items()
     html = template.replace("{{MARKET_CARDS}}", render_market_cards(market_items))
     html = html.replace("{{US_MARKET_REVIEW}}", render_us_market_review(market_items))
-    html = html.replace("{{ROWS}}", render_rows(df))
+    html = html.replace(
+        "{{ROWS}}",
+        render_rows(df, load_company_profiles(), load_performance_map()),
+    )
     html = html.replace("{{UPDATED_AT}}", updated_at)
     html = html.replace("{{TOTAL_COUNT}}", str(len(df)))
     html = html.replace("{{TOP_N}}", str(config.TOP_N))
