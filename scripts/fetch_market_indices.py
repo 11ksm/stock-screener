@@ -32,15 +32,29 @@ DOMESTIC = {
     "KOSPI": ("KOSPI", "코스피"),
     "KOSDAQ": ("KOSDAQ", "코스닥"),
     "KPI200": ("KOSPI 200", "코스피 200"),
-    # 같은 KOSPI200 선물 코드의 가장 최근 체결값입니다. 오전 06:30 KST 실행 시
-    # 전날 야간 세션 종료 후의 최신값을 우선 보여 주며, 실제 체결시각도 함께 표시합니다.
-    "FUT": ("KOSPI200 야간선물", "코스피 200 선물"),
 }
 WORLD = {
     ".DJI": ("DOW", "다우존스"),
     ".INX": ("S&P 500", "S&P 500"),
     ".IXIC": ("NASDAQ", "나스닥 종합"),
     ".SOX": ("SOX", "필라델피아 반도체"),
+}
+
+TRADINGVIEW_SCAN_URL = "https://scanner.tradingview.com/global/scan"
+NIGHT_FUTURES_SYMBOL = "KRX:K2I1!"
+NIGHT_FUTURES_COLUMNS = [
+    "name",
+    "description",
+    "close",
+    "change",
+    "volume",
+    "update_mode",
+]
+NIGHT_FUTURES_HEADERS = {
+    **HEADERS,
+    "Origin": "https://www.tradingview.com",
+    "Referer": "https://www.tradingview.com/",
+    "Content-Type": "application/json",
 }
 
 
@@ -92,7 +106,14 @@ def _item(code: str, short_name: str, full_name: str, row: dict, group: str):
     }
 
 
-def _unavailable(code: str, short_name: str, full_name: str, group: str, message: str):
+def _unavailable(
+    code: str,
+    short_name: str,
+    full_name: str,
+    group: str,
+    message: str,
+    source: str = "Npay 증권 공개 시세",
+):
     return {
         "code": code,
         "short_name": short_name,
@@ -105,7 +126,7 @@ def _unavailable(code: str, short_name: str, full_name: str, group: str, message
         "as_of": "",
         "market_status": "",
         "delay": "",
-        "source": "Npay 증권 공개 시세",
+        "source": source,
         "message": message[:180],
     }
 
@@ -130,6 +151,84 @@ def _fetch_group(path: str, definitions: dict, group: str, code_key: str):
         ]
 
 
+def _fetch_night_futures(now=None):
+    """오전 06:00에 끝난 KOSPI200 야간장의 마지막 지연 시세를 가져옵니다.
+
+    다음 야간장이 시작된 뒤 수동 실행하면 장중 값이 섞일 수 있으므로, 종료 후
+    충분한 지연시간을 둔 06:20~08:59 KST에만 값을 유효하게 처리합니다.
+    """
+    source = "TradingView KRX 연속선물"
+    now = now or datetime.now(ZoneInfo("Asia/Seoul"))
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=ZoneInfo("Asia/Seoul"))
+    else:
+        now = now.astimezone(ZoneInfo("Asia/Seoul"))
+
+    minute_of_day = now.hour * 60 + now.minute
+    if not (6 * 60 + 20 <= minute_of_day < 9 * 60):
+        return _unavailable(
+            "K2I1!",
+            "KOSPI200 야간",
+            "KOSPI 200 선물 야간장 종료값",
+            "night",
+            "오전 06:20~08:59 KST 수집값만 야간장 종료값으로 표시합니다.",
+            source,
+        )
+
+    payload = {
+        "symbols": {"tickers": [NIGHT_FUTURES_SYMBOL], "query": {"types": []}},
+        "columns": NIGHT_FUTURES_COLUMNS,
+    }
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                TRADINGVIEW_SCAN_URL,
+                headers=NIGHT_FUTURES_HEADERS,
+                json=payload,
+                timeout=(10, 25),
+            )
+            response.raise_for_status()
+            result = response.json()
+            rows = result.get("data", []) if isinstance(result, dict) else []
+            values = rows[0].get("d", []) if rows and isinstance(rows[0], dict) else []
+            if len(values) < len(NIGHT_FUTURES_COLUMNS):
+                raise ValueError("야간선물 응답 항목이 부족합니다.")
+
+            close = _number(values[2])
+            change_rate = _number(values[3])
+            if close is None or change_rate is None:
+                raise ValueError("야간선물 종가 또는 등락률이 없습니다.")
+            previous = close / (1 + change_rate / 100) if change_rate != -100 else None
+            change = close - previous if previous is not None else None
+            return {
+                "code": "K2I1!",
+                "short_name": "KOSPI200 야간",
+                "name": "KOSPI 200 선물 야간장 종료값",
+                "group": "night",
+                "status": "ok",
+                "value": close,
+                "change": change,
+                "change_rate": change_rate,
+                "as_of": now.isoformat(timespec="minutes"),
+                "market_status": "CLOSE",
+                "delay": "20분 지연 · 06:00 마감 후 수집",
+                "source": source,
+            }
+        except Exception as exc:
+            last_error = exc
+            if attempt + 1 < 3:
+                time.sleep(1.5 * (attempt + 1))
+    return _unavailable(
+        "K2I1!",
+        "KOSPI200 야간",
+        "KOSPI 200 선물 야간장 종료값",
+        "night",
+        str(last_error),
+        source,
+    )
+
+
 def fetch_market_indices():
     domestic_codes = ",".join(DOMESTIC)
     world_codes = ",".join(WORLD)
@@ -147,7 +246,7 @@ def fetch_market_indices():
     )
     payload = {
         "generated_at": datetime.now(ZoneInfo("Asia/Seoul")).isoformat(timespec="seconds"),
-        "items": domestic + world,
+        "items": domestic + [_fetch_night_futures()] + world,
     }
     os.makedirs(config.DATA_DIR, exist_ok=True)
     output_path = os.path.join(config.DATA_DIR, "market_indices.json")
