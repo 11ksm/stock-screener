@@ -9,6 +9,8 @@ import fetch_price_data
 import fetch_investor_data
 import fetch_buyback_dart
 import compute_score
+import fetch_company_profiles
+import update_tracking
 import generate_html
 
 
@@ -28,7 +30,13 @@ def main():
     print("=== 4. 스코어링 계산 ===")
     compute_score.compute_scores()
 
-    print("=== 5. 홈페이지 생성 ===")
+    print("=== 5. 선정종목 성과 추적 ===")
+    update_tracking.update_tracking()
+
+    print("=== 6. 기업 주요사업 정보 수집 ===")
+    fetch_company_profiles.fetch_company_profiles()
+
+    print("=== 7. 홈페이지 생성 ===")
     generate_html.generate()
 
     print("=== 완료 ===")
