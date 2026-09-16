@@ -40,17 +40,17 @@
   .section-title { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin: 0 0 12px; }
   .section-title h2 { margin: 0; font-size: 18px; color: var(--navy-950); letter-spacing: -.02em; }
   .section-title p { margin: 0; color: var(--muted); font-size: 11px; text-align: right; }
-  .market-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 14px; }
+  .market-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-bottom: 10px; }
   .market-card {
-    min-height: 125px; padding: 15px; background: var(--surface); border: 1px solid var(--line);
+    min-height: 96px; padding: 10px 13px; background: var(--surface); border: 1px solid var(--line);
     border-top: 3px solid var(--navy-700); border-radius: 7px; box-shadow: 0 4px 18px rgba(0,38,62,.055);
   }
   .market-card-top { display: flex; justify-content: space-between; align-items: center; color: var(--navy-700); font-size: 12px; font-weight: 800; letter-spacing: .02em; }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #8da0ad; }
-  .market-card strong { display: block; margin-top: 12px; color: var(--navy-950); font-size: 23px; letter-spacing: -.03em; }
-  .market-card p { margin: 6px 0 0; font-size: 12px; }
+  .market-card strong { display: block; margin-top: 6px; color: var(--navy-950); font-size: 23px; letter-spacing: -.03em; }
+  .market-card p { margin: 3px 0 0; font-size: 12px; }
   .market-card p b { margin-left: 4px; }
-  .market-card small { display: block; margin-top: 8px; color: var(--muted); font-size: 10px; }
+  .market-card small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
   .market-card.up { border-top-color: var(--up); } .market-card.up p { color: var(--up); } .market-card.up .status-dot { background: var(--up); }
   .market-card.down { border-top-color: var(--down); } .market-card.down p { color: var(--down); } .market-card.down .status-dot { background: var(--down); }
   .market-card.unavailable { opacity: .72; } .market-card.unavailable strong { font-size: 17px; color: var(--muted); }
@@ -67,15 +67,30 @@
   .toggle-button { border: 1px solid var(--navy-900); background: var(--navy-900); color: #fff; border-radius: 4px; padding: 9px 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
   .toggle-button:hover { background: var(--navy-700); }
   .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; min-width: 860px; font-size: 13px; }
   th, td { padding: 11px 9px; text-align: center; border-bottom: 1px solid #edf0f2; white-space: nowrap; }
   th { position: sticky; top: 0; background: #f7f9fa; color: #536572; font-size: 11px; cursor: pointer; }
   tbody tr:hover { background: #f8fbfc; }
   .rank { width: 55px; color: var(--muted); font-weight: 800; }
-  .stock-name { text-align: left; color: var(--navy-950); font-weight: 800; }
+  .stock-cell { min-width: 440px; text-align: left; white-space: normal; }
+  .stock-title { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+  .stock-name { color: var(--navy-950); font-weight: 900; margin-right: 3px; }
+  .business-summary { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+  .perf-badge { display: inline-block; padding: 3px 6px; border-radius: 3px; font-size: 10px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .perf-badge.positive { color: var(--up); background: #fff0ef; }
+  .perf-badge.negative { color: var(--down); background: #edf4ff; }
+  .perf-badge.flat { color: #536572; background: #edf1f3; }
+  .perf-badge.pending { color: #7a8891; background: #f0f2f3; font-weight: 700; }
   .ticker { color: var(--muted); font-variant-numeric: tabular-nums; }
   .market-badge { padding: 3px 7px; background: #edf4f7; border-radius: 3px; color: var(--navy-700); font-size: 10px; font-weight: 800; }
-  .score-total { color: var(--orange); font-size: 15px; font-weight: 900; }
+  .score-total { width: 155px; color: var(--orange); font-size: 15px; font-weight: 900; }
+  .score-details { position: relative; }
+  .score-details summary { display: inline-flex; align-items: center; justify-content: center; min-width: 58px; padding: 6px 9px; border: 1px solid #f2b276; border-radius: 4px; background: var(--orange-soft); color: #b85908; cursor: pointer; list-style: none; }
+  .score-details summary::-webkit-details-marker { display: none; }
+  .score-details summary::after { content: "＋"; margin-left: 5px; font-size: 10px; }
+  .score-details[open] summary::after { content: "－"; }
+  .score-breakdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 7px; padding: 7px; border: 1px solid var(--line); border-radius: 4px; background: #f8fafb; color: var(--muted); font-size: 9px; font-weight: 700; }
+  .score-breakdown b { display: block; color: var(--navy-950); font-size: 11px; }
   .disclaimer { margin: 14px 0 0; padding: 12px 15px; background: var(--orange-soft); border-left: 3px solid var(--orange); color: #714820; font-size: 11px; line-height: 1.6; }
   .methodology { margin-top: 22px; padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 8px; line-height: 1.68; font-size: 13px; }
   .methodology h2 { margin: 0 0 13px; color: var(--navy-950); font-size: 19px; }
@@ -88,7 +103,8 @@
   @media (max-width: 520px) {
     main { padding: 15px; } .header-inner { padding: 24px 17px; }
     .market-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
-    .market-card { min-height: 116px; padding: 12px; } .market-card strong { font-size: 19px; }
+    .market-card { min-height: 94px; padding: 9px; } .market-card strong { font-size: 19px; }
+    .stock-cell { min-width: 360px; }
     .panel-head { align-items: flex-start; flex-direction: column; } .toggle-button { width: 100%; }
     .us-review { grid-template-columns: 1fr; gap: 7px; }
   }
@@ -114,26 +130,26 @@
       <div class="us-review-label">US MARKET REVIEW</div>
       {{US_MARKET_REVIEW}}
     </div>
-    <p class="market-note">출처: 국내·미국 지수는 Npay 증권 공개 시세, KOSPI200 야간선물은 TradingView KRX 연속선물 지연 시세. 야간선물 카드는 평일 오전 07:00 KST 실행 시 오전 06:00에 종료된 세션의 마지막 값을 표시하며, 오전 06:20~08:59 수집값만 유효하게 처리합니다. 미국시장 리뷰는 주요 지수 등락률을 규칙으로 요약한 참고 문구입니다. 지수 데이터가 누락되어도 종목 순위 생성은 계속됩니다.</p>
+    <p class="market-note">출처: 국내·미국 지수는 Npay 증권 공개 시세, KOSPI200 야간선물은 TradingView KRX 연속선물 지연 시세. 야간선물 카드는 평일 오전 07:00 KST 실행 시 오전 06:00에 종료된 세션의 마지막 값을 표시하며, 오전 06:20~08:59 수집값만 유효하게 처리합니다. 미국시장 리뷰는 주요 지수와 야간선물의 방향을 규칙 기반으로 해석한 참고 문구입니다.</p>
   </section>
 
   <section class="panel" aria-labelledby="ranking-heading">
     <div class="panel-head">
       <div>
         <h2 id="ranking-heading">Today’s Screening Top {{TOP_N}}</h2>
-        <div class="meta">업데이트 {{UPDATED_AT}} · KOSPI/KOSDAQ 시가총액 각 {{UNIVERSE_PER_MARKET}}개 대상 · 분석 완료 {{TOTAL_COUNT}}개</div>
+        <div class="meta">업데이트 {{UPDATED_AT}} · KOSPI/KOSDAQ 시가총액 각 {{UNIVERSE_PER_MARKET}}개 대상 · 분석 완료 {{TOTAL_COUNT}}개 · 종합점수를 누르면 세부점수 표시</div>
       </div>
       <button id="toggle-all" class="toggle-button" type="button" aria-expanded="false">전체보기 ({{TOTAL_COUNT}}개)</button>
     </div>
     <div class="table-wrap">
       <table id="score-table">
-        <thead><tr><th>순위</th><th>종목명</th><th>시장</th><th>코드</th><th>종합</th><th>수급</th><th>기술</th><th>재료</th></tr></thead>
+        <thead><tr><th>순위</th><th>종목명 · 주요 사업 · 추적성과(괄호는 선정일)</th><th>시장</th><th>코드</th><th>종합점수</th></tr></thead>
         <tbody>{{ROWS}}</tbody>
       </table>
     </div>
   </section>
 
-  <div class="disclaimer">본 페이지는 공개된 시세·수급·공시 데이터를 기계적 기준으로 계산한 참고자료이며 투자 권유 또는 수익률 예측이 아닙니다. 신규상장·거래정지·데이터 미제공 종목은 분석 완료 수에서 제외될 수 있으므로 고객 안내 전 원자료를 확인하세요.</div>
+  <div class="disclaimer">본 페이지는 공개된 시세·수급·공시 데이터를 기계적 기준으로 계산한 참고자료이며 투자 권유 또는 수익률 예측이 아닙니다. 성과는 상위 10종목을 선정일 정규장 종가에 가상 매수한 뒤 다음 거래일 및 5거래일 뒤 종가로 계산하며, 세금·수수료·슬리피지·배당은 반영하지 않습니다. 기업개요는 네이버 기업정보(FnGuide) 공개자료를 요약 표시합니다. 고객 안내 전 원자료를 확인하세요.</div>
 
   <section class="methodology">
     <h2>점수 산정 방법</h2>
@@ -146,6 +162,8 @@
     <p>최근 30일 DART 공시 제목에서 자기주식 관련 내용을 확인합니다. 소각 100점, 취득 80점, 처분 30점이며 복수 공시는 최고점을 적용합니다.</p>
     <h3>해석 기준</h3>
     <p>모든 점수는 당일 분석 완료 종목 안에서의 상대점수이며 예상수익률이나 상승확률이 아닙니다. 누락 데이터는 기존 계산 규칙에 따라 0점 처리됩니다.</p>
+    <h3>성과 추적 기준</h3>
+    <p>매일 상위 {{TOP_N}}개를 기록하고 선정일 정규장 종가를 가상 매수가로 사용합니다. 1일은 다음 거래일 종가, 1주는 5거래일 뒤 종가 기준 단순수익률입니다. 종목 옆에는 해당 종목의 가장 최근 확정 성과가 표시되며 산출 전에는 ‘집계 전’으로 표시됩니다.</p>
     <p class="note">분석 모집단: 매 실행 시점 네이버 시장가치 목록의 KOSPI·KOSDAQ 시가총액 상위 각 {{UNIVERSE_PER_MARKET}}개. 수급대금은 제공 순매수 수량×종가의 추정치입니다.</p>
   </section>
 </main>
@@ -169,7 +187,8 @@
       const rows = Array.from(tbody.querySelectorAll("tr"));
       const asc = th.dataset.asc !== "true";
       rows.sort((a, b) => {
-        const av = a.children[idx].innerText.trim(); const bv = b.children[idx].innerText.trim();
+        const ac = a.children[idx]; const bc = b.children[idx];
+        const av = (ac.dataset.sortValue || ac.innerText).trim(); const bv = (bc.dataset.sortValue || bc.innerText).trim();
         const an = Number(av.replace(/,/g, "")); const bn = Number(bv.replace(/,/g, ""));
         if (av !== "" && bv !== "" && !Number.isNaN(an) && !Number.isNaN(bn)) return asc ? an - bn : bn - an;
         return asc ? av.localeCompare(bv, "ko") : bv.localeCompare(av, "ko");
